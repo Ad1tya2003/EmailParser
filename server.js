@@ -9,6 +9,8 @@ const { outlookOAuth2Client, getOutlookAuthURL, handleOutlookCallback } = requir
 const fs = require('fs');
 
 const app = express();
+const fs = require('fs');
+const path = require('path');
 const PORT = process.env.PORT || 3000;
 
 // Middleware
@@ -20,8 +22,21 @@ app.use(session({
     saveUninitialized: true,
 }));
 
-// In-memory storage for accounts (for production, use a database)
+
+
+// Load accounts from JSON file
+const accountsFilePath = path.join(__dirname, 'accounts.json');
 let accounts = [];
+
+if (fs.existsSync(accountsFilePath)) {
+    const data = fs.readFileSync(accountsFilePath);
+    accounts = JSON.parse(data);
+}
+
+// Function to save accounts to JSON file
+function saveAccounts() {
+    fs.writeFileSync(accountsFilePath, JSON.stringify(accounts, null, 2));
+}
 
 // Home Route
 app.get('/', (req, res) => {
@@ -47,15 +62,21 @@ app.get('/auth/google', (req, res) => {
 app.get('/auth/google/callback', async (req, res) => {
     try {
         const tokens = await handleGoogleCallback(req.query.code);
-        const profile = await googleOAuth2Client.getTokenInfo(tokens.access_token);
+        const oauth2Client = require('./googleAuth').googleOAuth2Client;
+        const oauth2 = google.oauth2({
+            auth: oauth2Client,
+            version: 'v2',
+        });
+        const userInfo = await oauth2.userinfo.get();
         const account = {
             provider: 'google',
-            email: profile.email || 'unknown',
+            email: userInfo.data.email,
             accessToken: tokens.access_token,
             refreshToken: tokens.refresh_token,
             expiryDate: tokens.expiry_date || null,
         };
         accounts.push(account);
+        saveAccounts();
         res.send('Google account connected successfully!');
     } catch (error) {
         console.error(error);
@@ -87,6 +108,7 @@ app.get('/auth/outlook/callback', async (req, res) => {
             expiryDate: tokens.expires_on || null,
         };
         accounts.push(account);
+        saveAccounts();
         res.send('Outlook account connected successfully!');
     } catch (error) {
         console.error(error.response ? error.response.data : error.message);
