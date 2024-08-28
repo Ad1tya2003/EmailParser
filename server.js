@@ -9,7 +9,7 @@ const { outlookOAuth2Client, getOutlookAuthURL, handleOutlookCallback } = requir
 const fs = require('fs');
 
 const app = express();
-const fs = require('fs');
+
 const path = require('path');
 const PORT = process.env.PORT || 3000;
 
@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(session({
-    secret: 'your_secret_key', // Replace with a secure key
+    secret: 'your_secret_key',
     resave: false,
     saveUninitialized: true,
 }));
